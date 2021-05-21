@@ -27,9 +27,9 @@ jobs:
         ...
         steps:
             - actions/checkout@v1
-            # Make sure the @v0.4.0 matches the current version of the
+            # Make sure the @v0.4.1 matches the current version of the
             # action 
-            - uses: webfactory/ssh-agent@v0.4.0
+            - uses: webfactory/ssh-agent@v0.4.1
               with:
                   ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
             - ... other steps
@@ -38,13 +38,13 @@ jobs:
 
 ### Using multiple keys
 
-There are cases where you might need to use multiple keys. For example, "deployment keys" might be limited to a single repository each.
+There are cases where you might need to use multiple keys. For example, "[deploy keys](https://docs.github.com/en/developers/overview/managing-deploy-keys#deploy-keys)" might be limited to a single repository, so you'll need several of them.
 
-In that case, you can set-up the different keys as multiple secrets and pass them all to the action like so:
+You can set up different keys as different secrets and pass them all to the action like so:
 
 ```yaml
 # ... contens as before
-            - uses: webfactory/ssh-agent@v0.4.0
+            - uses: webfactory/ssh-agent@v0.4.1
               with:
                   ssh-private-key: |
                         ${{ secrets.FIRST_KEY }}
@@ -58,12 +58,13 @@ In that case, you can set-up the different keys as multiple secrets and pass the
 
 The `ssh-agent` will load all of the keys and try each one in order when establishing SSH connections.
 
-Optionally, `repo-mappings` provides a list of git repos that correlate to the keys provided. If you specify `repo-mappings` you **MUST** specify the same number mappings as you provided `ssh-private-key` entries and they **MUST** be in the same order. Each mapping **MUST** be in the format of `{HOSTNAME}/{OWNER}/{REPO}` without any *https://*, *git@* , or *ssh://* prefix and using **slashes** not the mixed slashes and colons used in the ssh format.
 
-These mappings are used to generate git config `insteadOf` entries to psuedo hostnames, where the pseudo hostnames are each assigned the associated `ssh-private-key`. See the [Repo Mappings](#repo-mappings) section for details on how this works.
+There's one **caveat**, though: SSH servers may abort the connection attempt after a number of mismatching keys have been presented. So if, for example, you have
+six different keys loaded into the `ssh-agent`, but the server aborts after five unknown keys, the last key (which might be the right one) will never even be tried. 
 
-There's one **caveat**, though, if you're not using `repo-mappings`: SSH servers may abort the connection attempt after a number of mismatching keys have been presented. So if, for example, you have
-six different keys loaded into the `ssh-agent`, but the server aborts after five unknown keys, the last key (which might be the right one) will never even be tried. If you don't need all of the keys at the same time, you could try to `run: kill $SSH_AGENT_PID` to kill the currently running `ssh-agent` and use the action again in a following step to start another instance.
+Also, when using **Github deploy keys**, GitHub servers will accept the first known key. But since deploy keys are scoped to a single repository, you might get the error message `fatal: Could not read from remote repository. Please make sure you have the correct access rights and the repository exists.` if the wrong key/repository combination is tried.
+
+In both cases, you might want to [try a wrapper script around `ssh`](https://gist.github.com/mpdude/e56fcae5bc541b95187fa764aafb5e6d) that can pick the right key, based on key comments. See [our blog post](https://www.webfactory.de/blog/using-multiple-ssh-deploy-keys-with-github) for the full story.
 
 ### Dropping the http.extraHeader added by actions/checkout@v2
 If you are using (actions/checkout@v2)[], it adds an `AUTHORIZATION: basic ${GITHUB_TOKEN}` header to all git calls. This header can conflict with the `repo-mappings` in some apps (like `go get`). If you are having issues, try setting this option to `true`.
