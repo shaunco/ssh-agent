@@ -1,5 +1,7 @@
 # `ssh-agent` GitHub Action
 
+⚠️⚠️⚠️Migrated to [mapped/ssh-agent](https://github.com/mapped/ssh-agent/tree/git-repo-mapping)
+
 This action 
 * starts the `ssh-agent`, 
 * exports the `SSH_AUTH_SOCK` environment variable, 
